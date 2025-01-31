@@ -1,0 +1,32 @@
+﻿@model CarRentalApp.Models.Car
+
+@{
+    ViewData["Title"] = "Edit Car";
+}
+
+<h1>Edit Car</h1>
+
+<h4>Car</h4>
+<hr />
+<form asp-action="Edit">
+    <div class="form-group">
+        <label asp-for="Brand" class="control-label"></label>
+        <input asp-for="Brand" class="form-control" />
+        <span asp-validation-for="Brand" class="text-danger"></span>
+    </div>
+    <div class="form-group">
+        <label asp-for="Model" class="control-label"></label>
+        <input asp-for="Model" class="form-control" />
+        <span asp-validation-for="Model" class="text-danger"></span>
+    </div>
+    <div class="form-group">
+        <label asp-for="PricePerDay" class="control-label"></label>
+        <input asp-for="PricePerDay" class="form-control" />
+        <span asp-validation-for="PricePerDay" class="text-danger"></span>
+    </div>
+    <div class="form-group">
+        <button type="submit" class="btn btn-primary">Save Changes</button>
+    </div>
+</form>
+
+<a asp-action="Index" class="btn btn-link">Back to list</a>
