@@ -1,0 +1,36 @@
+﻿@model IEnumerable<Reservation>
+
+@{
+    ViewData["Title"] = "My Reservations";
+}
+
+<h2>My Reservations</h2>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>Car</th>
+            <th>Start Date</th>
+            <th>End Date</th>
+            
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var reservation in Model)
+        {
+            <tr>
+                <td>@reservation.Car.Brand @reservation.Car.Model</td>
+                <td>@reservation.StartDate.ToShortDateString()</td>
+                <td>@reservation.EndDate.ToShortDateString()</td>
+                <td>
+                    <form asp-controller="Reservations" asp-action="Cancel" method="post">
+                        <input type="hidden" name="id" value="@reservation.Id" />
+                        <button type="submit" class="btn btn-danger">Cancel</button>
+                    </form>
+                </td>
+
+                
+            </tr>
+        }
+    </tbody>
+</table>

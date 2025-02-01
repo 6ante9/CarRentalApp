@@ -29,6 +29,13 @@
                                     <button type="submit" class="nav-link btn btn-link text-dark border-0">Logout</button>
                                 </form>
                             </li>
+                            @if (User.Identity.IsAuthenticated)
+                            {
+                                <li class="nav-item">
+                                    <a class="nav-link text-dark" asp-controller="Reservations" asp-action="Index">My Reservations</a>
+                                </li>
+                            }
+
                         }
                         else
                         {

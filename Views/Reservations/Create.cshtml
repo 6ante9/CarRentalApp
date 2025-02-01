@@ -1,0 +1,28 @@
+﻿@model Reservation
+
+<h2>Reserve a Car</h2>
+
+@if (Model.CarId == 0)
+{
+    <p class="text-danger">Greška: Nije odabran automobil!</p>
+}
+
+<form asp-controller="Reservations" asp-action="Create" method="post">
+    <input type="hidden" asp-for="CarId" />
+
+    <div class="form-group">
+        <label>Start Date</label>
+        <input asp-for="StartDate" type="date" class="form-control" required />
+        <span asp-validation-for="StartDate" class="text-danger"></span>
+    </div>
+
+    <div class="form-group">
+        <label>End Date</label>
+        <input asp-for="EndDate" type="date" class="form-control" required />
+        <span asp-validation-for="EndDate" class="text-danger"></span>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Reserve</button>
+</form>
+
+<p>Car ID: @Model.CarId</p>

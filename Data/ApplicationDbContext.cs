@@ -10,4 +10,6 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     }
 
     public DbSet<Car> Cars { get; set; }
+    public DbSet<Reservation> Reservations { get; set; }
+
 }

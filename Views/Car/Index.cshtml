@@ -26,6 +26,10 @@
                     <a asp-action="Edit" asp-route-id="@car.Id" class="btn btn-primary">Edit</a>
                     <a asp-action="Delete" asp-route-id="@car.Id" class="btn btn-danger">Delete</a>
                 </td>
+                <td>
+                    <a asp-controller="Reservations" asp-action="Create" asp-route-carId="@car.Id" class="btn btn-success">Reserve</a>
+                </td>
+
             </tr>
         }
     </tbody>
