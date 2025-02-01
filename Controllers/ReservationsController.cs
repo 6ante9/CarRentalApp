@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -11,11 +12,47 @@ public class ReservationsController : Controller
 {
     private readonly ApplicationDbContext _context;
     private readonly UserManager<ApplicationUser> _userManager;
+    private readonly SignInManager<ApplicationUser> _signInManager;
 
-    public ReservationsController(ApplicationDbContext context, UserManager<ApplicationUser> userManager)
+    public ReservationsController(ApplicationDbContext context, UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager)
     {
         _context = context;
         _userManager = userManager;
+        _signInManager = signInManager;
+    }
+
+    [HttpPost]
+    [AllowAnonymous]
+    public async Task<IActionResult> Login(string email, string password, string returnUrl = null)
+    {
+        returnUrl ??= Url.Action("Index", "Car"); // ✅ Preusmjeravanje nakon logina na Cars
+        var user = await _userManager.FindByEmailAsync(email);
+        if (user != null)
+        {
+            var result = await _signInManager.PasswordSignInAsync(user, password, false, false);
+            if (result.Succeeded)
+            {
+                return RedirectToAction("Index", "Car");
+            }
+        }
+        ModelState.AddModelError(string.Empty, "Invalid login attempt.");
+        return View();
+    }
+
+    [HttpPost]
+    [AllowAnonymous]
+    public async Task<IActionResult> Register(string email, string password, string returnUrl = null)
+    {
+        returnUrl ??= Url.Action("Index", "Car"); // ✅ Preusmjeravanje nakon registracije na Cars
+        var user = new ApplicationUser { UserName = email, Email = email };
+        var result = await _userManager.CreateAsync(user, password);
+        if (result.Succeeded)
+        {
+            await _signInManager.SignInAsync(user, isPersistent: false);
+            return RedirectToAction("Index", "Car");
+        }
+        ModelState.AddModelError(string.Empty, "Registration failed.");
+        return View();
     }
 
     [Authorize]
@@ -55,6 +92,7 @@ public class ReservationsController : Controller
             StartDate = DateTime.Today,
             EndDate = DateTime.Today.AddDays(1)
         };
+
         return View(reservation);
     }
 
@@ -63,10 +101,9 @@ public class ReservationsController : Controller
     public async Task<IActionResult> Create(Reservation reservation)
     {
         var user = await _userManager.GetUserAsync(User);
-
-        if (user == null || User.IsInRole("Admin"))
+        if (user == null)
         {
-            return Forbid();
+            return Unauthorized();
         }
 
         reservation.UserId = user.Id;
@@ -92,9 +129,6 @@ public class ReservationsController : Controller
         {
             ModelState.AddModelError("CarUnavailable", "Ovaj automobil je već rezerviran u odabranom periodu.");
         }
-
-        ModelState.Remove("User");
-        ModelState.Remove("Car");
 
         if (ModelState.IsValid)
         {
