@@ -6,6 +6,7 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 
+[Authorize]
 public class ReservationsController : Controller
 {
     private readonly ApplicationDbContext _context;
@@ -21,11 +22,23 @@ public class ReservationsController : Controller
     public async Task<IActionResult> Index()
     {
         var user = await _userManager.GetUserAsync(User);
-        var reservations = await _context.Reservations
-            .Include(r => r.Car)
-            .Where(r => r.UserId == user.Id)
-            .ToListAsync();
-        return View(reservations);
+
+        if (User.IsInRole("Admin"))
+        {
+            var allReservations = await _context.Reservations
+                .Include(r => r.Car)
+                .Include(r => r.User)
+                .ToListAsync();
+            return View(allReservations);
+        }
+        else
+        {
+            var userReservations = await _context.Reservations
+                .Include(r => r.Car)
+                .Where(r => r.UserId == user.Id)
+                .ToListAsync();
+            return View(userReservations);
+        }
     }
 
     [Authorize]
@@ -33,10 +46,8 @@ public class ReservationsController : Controller
     {
         if (carId == 0)
         {
-            return NotFound("CarId je nevažeći!"); // Bolja greška za debugging
+            return NotFound("CarId je nevažeći!");
         }
-
-        Console.WriteLine($"Otvorena Create stranica za auto ID: {carId}");
 
         var reservation = new Reservation
         {
@@ -51,78 +62,61 @@ public class ReservationsController : Controller
     [Authorize]
     public async Task<IActionResult> Create(Reservation reservation)
     {
-        Console.WriteLine("Rezervacija metoda je pokrenuta!");
-
         var user = await _userManager.GetUserAsync(User);
 
-        if (user == null)
+        if (user == null || User.IsInRole("Admin"))
         {
-            Console.WriteLine("Greška: Korisnik nije pronađen!");
-            return BadRequest("Niste prijavljeni ili korisnik ne postoji.");
+            return Forbid();
         }
 
         reservation.UserId = user.Id;
-        reservation.User = null; // Postavljanje User na NULL da izbjegnemo validaciju
+        reservation.User = null;
         reservation.Car = await _context.Cars.FindAsync(reservation.CarId);
 
         if (reservation.Car == null)
         {
-            Console.WriteLine($"Greška: Auto sa ID {reservation.CarId} ne postoji!");
-            return BadRequest("Odabrani automobil ne postoji.");
+            ModelState.AddModelError("CarError", "Odabrani automobil ne postoji.");
+            return View(reservation);
         }
 
-        Console.WriteLine($"UserId u aplikaciji: {reservation.UserId}, CarId: {reservation.CarId}");
+        if (reservation.StartDate >= reservation.EndDate)
+        {
+            ModelState.AddModelError("DateError", "Datum početka mora biti prije datuma završetka.");
+        }
+
+        bool isCarAvailable = !_context.Reservations.Any(r => r.CarId == reservation.CarId &&
+            ((reservation.StartDate >= r.StartDate && reservation.StartDate <= r.EndDate) ||
+             (reservation.EndDate >= r.StartDate && reservation.EndDate <= r.EndDate)));
+
+        if (!isCarAvailable)
+        {
+            ModelState.AddModelError("CarUnavailable", "Ovaj automobil je već rezerviran u odabranom periodu.");
+        }
 
         ModelState.Remove("User");
         ModelState.Remove("Car");
-        ModelState.Remove("UserId");
 
         if (ModelState.IsValid)
         {
-            try
-            {
-                _context.Reservations.Add(reservation);
-                await _context.SaveChangesAsync();
-                Console.WriteLine("Rezervacija spremljena u bazu!");
-                return RedirectToAction("Index");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Greška prilikom spremanja: {ex.Message}");
-                return View(reservation);
-            }
-        }
-        else
-        {
-            Console.WriteLine("ModelState i dalje nije validan! Prikaz grešaka:");
-            foreach (var modelStateKey in ModelState.Keys)
-            {
-                var modelStateVal = ModelState[modelStateKey];
-                foreach (var error in modelStateVal.Errors)
-                {
-                    Console.WriteLine($"Greška u polju {modelStateKey}: {error.ErrorMessage}");
-                }
-            }
+            _context.Reservations.Add(reservation);
+            await _context.SaveChangesAsync();
+            return RedirectToAction("Index");
         }
 
         return View(reservation);
     }
 
-    [Authorize]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Cancel(int id)
     {
-        var user = await _userManager.GetUserAsync(User);
-        var reservation = await _context.Reservations.FirstOrDefaultAsync(r => r.Id == id && r.UserId == user.Id);
-
+        var reservation = await _context.Reservations.FindAsync(id);
         if (reservation == null)
         {
-            return NotFound("Rezervacija nije pronađena ili nemate dopuštenje za otkazivanje.");
+            return NotFound();
         }
 
         _context.Reservations.Remove(reservation);
         await _context.SaveChangesAsync();
-
-        Console.WriteLine($"Rezervacija ID {id} otkazana od strane korisnika {user.Id}");
 
         return RedirectToAction("Index");
     }

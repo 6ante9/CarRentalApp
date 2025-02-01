@@ -1,10 +1,10 @@
 ﻿@model IEnumerable<Reservation>
 
 @{
-    ViewData["Title"] = "My Reservations";
+    ViewData["Title"] = "Reservations";
 }
 
-<h2>My Reservations</h2>
+<h1>All Reservations</h1>
 
 <table class="table">
     <thead>
@@ -12,7 +12,11 @@
             <th>Car</th>
             <th>Start Date</th>
             <th>End Date</th>
-            
+            @if (User.IsInRole("Admin"))
+            {
+                <th>User</th>
+            }
+            <th>Actions</th>
         </tr>
     </thead>
     <tbody>
@@ -22,14 +26,16 @@
                 <td>@reservation.Car.Brand @reservation.Car.Model</td>
                 <td>@reservation.StartDate.ToShortDateString()</td>
                 <td>@reservation.EndDate.ToShortDateString()</td>
+                @if (User.IsInRole("Admin"))
+                {
+                    <td>@reservation.User.UserName</td>
+                }
                 <td>
-                    <form asp-controller="Reservations" asp-action="Cancel" method="post">
-                        <input type="hidden" name="id" value="@reservation.Id" />
-                        <button type="submit" class="btn btn-danger">Cancel</button>
-                    </form>
+                    @if (User.IsInRole("Admin"))
+                    {
+                        <a asp-action="Cancel" asp-route-id="@reservation.Id" class="btn btn-danger">Cancel</a>
+                    }
                 </td>
-
-                
             </tr>
         }
     </tbody>

@@ -8,8 +8,8 @@ public class Reservation
     [Key]
     public int Id { get; set; }
 
-    [Required]
-    public string UserId { get; set; }
+    
+    public string? UserId { get; set; }
 
     [ForeignKey("UserId")]
     public virtual ApplicationUser? User { get; set; } // ⚠️ Dodan `?` da bude nullable

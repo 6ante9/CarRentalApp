@@ -2,6 +2,19 @@
 
 <h2>Reserve a Car</h2>
 
+@if (!ViewData.ModelState.IsValid)
+{
+    <div class="alert alert-danger">
+        <ul>
+            @foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+            {
+                <li>@error.ErrorMessage</li>
+            }
+        </ul>
+    </div>
+}
+
+
 @if (Model.CarId == 0)
 {
     <p class="text-danger">Greška: Nije odabran automobil!</p>
