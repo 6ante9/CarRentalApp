@@ -106,13 +106,21 @@ public class ReservationsController : Controller
         return View(reservation);
     }
 
-    [Authorize(Roles = "Admin")]
+    [Authorize]
     public async Task<IActionResult> Cancel(int id)
     {
+        var user = await _userManager.GetUserAsync(User);
         var reservation = await _context.Reservations.FindAsync(id);
+
         if (reservation == null)
         {
             return NotFound();
+        }
+
+        // Ako korisnik nije admin, može otkazati samo svoju rezervaciju
+        if (!User.IsInRole("Admin") && reservation.UserId != user.Id)
+        {
+            return Forbid();
         }
 
         _context.Reservations.Remove(reservation);
