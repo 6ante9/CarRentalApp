@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
 using CarRentalApp.Models;
 
-[Authorize]
+[Authorize]  // Ovdje osiguravamo da samo prijavljeni korisnici mogu pristupiti ovim akcijama
 public class CarController : Controller
 {
     private readonly ApplicationDbContext _context;
@@ -16,12 +16,20 @@ public class CarController : Controller
     // Prikaz svih automobila
     public async Task<IActionResult> Index()
     {
+        if (!User.Identity.IsAuthenticated)
+        {
+            return RedirectToAction("Login", "Account"); // Preusmjerava ako korisnik nije prijavljen
+        }
         return View(await _context.Cars.ToListAsync());
     }
 
     // Prikaz forme za kreiranje novog automobila
     public IActionResult Create()
     {
+        if (!User.Identity.IsAuthenticated)
+        {
+            return RedirectToAction("Login", "Account"); // Preusmjerava ako korisnik nije prijavljen
+        }
         return View();
     }
 

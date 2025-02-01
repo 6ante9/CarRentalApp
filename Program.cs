@@ -1,61 +1,63 @@
-using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Identity;
-using CarRentalApp.Models; // Ako je potrebno
+using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity.UI.Services;
 
-namespace CarRentalApp
+public class Program
 {
-    public class Program
+    public static void Main(string[] args)
     {
-        public static void Main(string[] args)
+        var builder = WebApplication.CreateBuilder(args);
+
+        // Dodajemo uslugu za DB context i autentifikaciju
+        builder.Services.AddDbContext<ApplicationDbContext>(options =>
+            options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+        // Konfiguriramo identifikaciju i dodajemo podršku za Identity framework s ulogama
+        builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
         {
-            var builder = WebApplication.CreateBuilder(args);
+            options.SignIn.RequireConfirmedAccount = false; // Onemogućava potvrdu emaila
+        })
+        .AddEntityFrameworkStores<ApplicationDbContext>()
+        .AddDefaultTokenProviders();
 
-            // Add services to the container.
-            builder.Services.AddDbContext<ApplicationDbContext>(options =>
-                options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+        // Dodajemo lažni email sender kako bismo izbjegli grešku
+        builder.Services.AddSingleton<IEmailSender, EmailSender>();
 
-            builder.Services.AddDefaultIdentity<ApplicationUser>(options => options.SignIn.RequireConfirmedAccount = false)
-                .AddEntityFrameworkStores<ApplicationDbContext>();
+        // Konfiguracija autentifikacije pomoću kolačića
+        builder.Services.ConfigureApplicationCookie(options =>
+        {
+            options.LoginPath = "/Identity/Account/Login";   // Ispravljena putanja za prijavu
+            options.LogoutPath = "/Identity/Account/Logout"; // Ispravljena putanja za odjavu
+            options.AccessDeniedPath = "/Identity/Account/AccessDenied"; // Ispravljena putanja za zabranjen pristup
+            options.ExpireTimeSpan = TimeSpan.FromMinutes(60);
+            options.SlidingExpiration = true;
+        });
 
-            // Add MVC controllers and views (this will be used for CarController and other controllers)
-            builder.Services.AddControllersWithViews();
+        builder.Services.AddRazorPages();
+        builder.Services.AddControllersWithViews();
 
-            // Add authorization services
-            builder.Services.AddAuthorization(options =>
-            {
-                options.FallbackPolicy = options.DefaultPolicy;
-            });
+        var app = builder.Build();
 
-            var app = builder.Build();
-
-            // Configure the HTTP request pipeline.
-            if (app.Environment.IsDevelopment())
-            {
-                app.UseDeveloperExceptionPage();
-            }
-            else
-            {
-                app.UseExceptionHandler("/Home/Error");
-                app.UseHsts();
-            }
-
-            app.UseHttpsRedirection();
-            app.UseStaticFiles();
-
-            app.UseRouting();
-
-            app.UseAuthentication(); // Enable authentication
-            app.UseAuthorization();  // Enable authorization
-
-            // Routing: MVC controllers, default route
-            app.MapControllerRoute(
-                name: "default",
-                pattern: "{controller=Home}/{action=Index}/{id?}");
-
-            // Map Razor Pages (comment if not using Razor Pages)
-            // app.MapRazorPages(); 
-
-            app.Run();
+        // Provjera okruženja (razvoj, produkcija)
+        if (!app.Environment.IsDevelopment())
+        {
+            app.UseExceptionHandler("/Home/Error");
+            app.UseHsts();
         }
+
+        app.UseHttpsRedirection();
+        app.UseStaticFiles();
+        app.UseRouting();
+        app.UseAuthentication(); // Potrebno za autentifikaciju
+        app.UseAuthorization();  // Potrebno za autorizaciju
+
+        // Mapiranje rute za MVC i Razor Pages
+        app.MapControllerRoute(
+            name: "default",
+            pattern: "{controller=Home}/{action=Index}/{id?}");
+        app.MapRazorPages();
+
+        app.Run();
     }
 }
