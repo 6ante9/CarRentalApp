@@ -1,0 +1,28 @@
+﻿@model CarRentalApp.Models.Car
+
+@{
+    ViewData["Title"] = "Delete Car";
+}
+
+<h2>Delete Car</h2>
+
+<h3>Are you sure you want to delete this car?</h3>
+
+<div>
+    <h4>Car</h4>
+    <hr />
+    <dl class="dl-horizontal">
+        <dt>Brand</dt>
+        <dd>@Model.Brand</dd>
+        <dt>Model</dt>
+        <dd>@Model.Model</dd>
+        <dt>Price per Day</dt>
+        <dd>@Model.PricePerDay</dd>
+    </dl>
+</div>
+
+<!-- Promjena asp-action na "Delete", umjesto "DeleteConfirmed" -->
+<form method="post" asp-action="Delete" asp-route-id="@Model.Id">
+    <button type="submit" class="btn btn-danger">Delete</button>
+    <a href="@Url.Action("Index", "Car")" class="btn btn-secondary">Cancel</a>
+</form>

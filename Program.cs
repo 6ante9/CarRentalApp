@@ -1,36 +1,107 @@
-namespace CarRentalApp
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity.UI.Services;
+using Microsoft.Extensions.DependencyInjection;
+using System;
+using System.Threading.Tasks;
+
+public class Program
 {
-    public class Program
+    public static async Task Main(string[] args)
     {
-        public static void Main(string[] args)
+        var builder = WebApplication.CreateBuilder(args);
+
+        // Dodajemo uslugu za DB context i autentifikaciju
+        builder.Services.AddDbContext<ApplicationDbContext>(options =>
+            options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+        // Konfiguriramo identifikaciju i dodajemo podršku za Identity framework s ulogama
+        builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
         {
-            var builder = WebApplication.CreateBuilder(args);
+            options.SignIn.RequireConfirmedAccount = false; // Onemogućava potvrdu emaila
+        })
+        .AddEntityFrameworkStores<ApplicationDbContext>()
+        .AddDefaultTokenProviders();
 
-            // Add services to the container.
-            builder.Services.AddControllersWithViews();
+        // Dodajemo lažni email sender kako bismo izbjegli grešku
+        builder.Services.AddSingleton<IEmailSender, EmailSender>();
 
-            var app = builder.Build();
+        builder.Services.ConfigureApplicationCookie(options =>
+        {
+            options.LoginPath = "/Identity/Account/Login";
+            options.LogoutPath = "/Identity/Account/Logout";
+            options.AccessDeniedPath = "/Identity/Account/AccessDenied";
+            options.ReturnUrlParameter = "returnUrl"; // ✅ Ovo osigurava da nakon logina ide na Cars
+        });
 
-            // Configure the HTTP request pipeline.
-            if (!app.Environment.IsDevelopment())
+
+        // Konfiguracija autentifikacije pomoću kolačića
+        builder.Services.ConfigureApplicationCookie(options =>
+        {
+            options.LoginPath = "/Identity/Account/Login";   // Ispravljena putanja za prijavu
+            options.LogoutPath = "/Identity/Account/Logout"; // Ispravljena putanja za odjavu
+            options.AccessDeniedPath = "/Identity/Account/AccessDenied"; // Ispravljena putanja za zabranjen pristup
+            options.ExpireTimeSpan = TimeSpan.FromMinutes(60);
+            options.SlidingExpiration = true;
+        });
+
+        builder.Services.AddRazorPages();
+        builder.Services.AddControllersWithViews();
+
+        var app = builder.Build();
+
+        using (var scope = app.Services.CreateScope())
+        {
+            var services = scope.ServiceProvider;
+            await CreateAdminUser(services);
+        }
+
+        // Provjera okruženja (razvoj, produkcija)
+        if (!app.Environment.IsDevelopment())
+        {
+            app.UseExceptionHandler("/Home/Error");
+            app.UseHsts();
+        }
+
+        app.UseHttpsRedirection();
+        app.UseStaticFiles();
+        app.UseRouting();
+        app.UseAuthentication(); // Potrebno za autentifikaciju
+        app.UseAuthorization();  // Potrebno za autorizaciju
+
+        // Mapiranje rute za MVC i Razor Pages
+        app.MapControllerRoute(
+            name: "default",
+            pattern: "{controller=Home}/{action=Index}/{id?}");
+        app.MapRazorPages();
+
+        app.Run();
+    }
+
+    private static async Task CreateAdminUser(IServiceProvider serviceProvider)
+    {
+        var userManager = serviceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+        var roleManager = serviceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+
+        string adminEmail = "admin@example.com";
+        string adminPassword = "Admin@123";
+
+        if (!await roleManager.RoleExistsAsync("Admin"))
+        {
+            await roleManager.CreateAsync(new IdentityRole("Admin"));
+        }
+
+        var adminUser = await userManager.FindByEmailAsync(adminEmail);
+        if (adminUser == null)
+        {
+            adminUser = new ApplicationUser { UserName = adminEmail, Email = adminEmail, EmailConfirmed = true };
+            var result = await userManager.CreateAsync(adminUser, adminPassword);
+
+            if (result.Succeeded)
             {
-                app.UseExceptionHandler("/Home/Error");
-                // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
-                app.UseHsts();
+                await userManager.AddToRoleAsync(adminUser, "Admin");
             }
-
-            app.UseHttpsRedirection();
-            app.UseStaticFiles();
-
-            app.UseRouting();
-
-            app.UseAuthorization();
-
-            app.MapControllerRoute(
-                name: "default",
-                pattern: "{controller=Home}/{action=Index}/{id?}");
-
-            app.Run();
         }
     }
 }

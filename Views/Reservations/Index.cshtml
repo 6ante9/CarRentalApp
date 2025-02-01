@@ -1,0 +1,39 @@
+﻿@model IEnumerable<Reservation>
+
+@{
+    ViewData["Title"] = "Reservations";
+}
+
+<h1>My Reservations</h1>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>Car</th>
+            <th>Start Date</th>
+            <th>End Date</th>
+            @if (User.IsInRole("Admin"))
+            {
+                <th>User</th>
+            }
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var reservation in Model)
+        {
+            <tr>
+                <td>@reservation.Car.Brand @reservation.Car.Model</td>
+                <td>@reservation.StartDate.ToShortDateString()</td>
+                <td>@reservation.EndDate.ToShortDateString()</td>
+                @if (User.IsInRole("Admin"))
+                {
+                    <td>@reservation.User.UserName</td>
+                }
+                <td>
+                    <a asp-action="Cancel" asp-route-id="@reservation.Id" class="btn btn-danger">Cancel</a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
